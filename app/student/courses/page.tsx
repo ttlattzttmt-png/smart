@@ -122,11 +122,3 @@ export default function StudentCoursesPage() {
     </div>
   )
 }
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  )
-}

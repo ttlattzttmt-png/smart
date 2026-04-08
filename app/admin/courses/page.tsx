@@ -74,15 +74,26 @@ export default function CoursesPage() {
         price: Number(formData.price)
       }
 
-      const response = await fetch('/api/courses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
+      let response
+      if (editingCourse) {
+        // Update existing course
+        response = await fetch(`/api/courses/${editingCourse.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+      } else {
+        // Create new course
+        response = await fetch('/api/courses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+      }
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'فشل إضافة الكورس')
+        throw new Error(error.error || 'فشلت العملية')
       }
 
       await fetchCourses()
