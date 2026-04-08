@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -71,7 +71,7 @@ model Quiz {
   video         Video?     @relation(fields: [videoId], references: [id], onDelete: SetNull)
   title         String
   type          String     // "video", "monthly", "final"
-  questions     Json       // Array of Question objects
+  questions     String     // JSON string of Question objects array
   duration      Int        // in minutes
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
@@ -103,7 +103,7 @@ model StudentProgress {
   student           User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   courseId          String
   course            Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  completedVideos   String[] // array of video IDs
+  completedVideos   String   // JSON string array of video IDs
   updatedAt         DateTime @updatedAt
 
   @@unique([studentId, courseId])
@@ -118,7 +118,7 @@ model QuizResult {
   studentId     String
   student       User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   score         Int
-  answers       Int[]    // array of answer indices
+  answers       String    // JSON string array of answer indices
   completedAt   DateTime @default(now())
 
   @@index([quizId])

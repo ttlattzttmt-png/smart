@@ -25,7 +25,16 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ success: true, data: course })
+    // Parse questions from JSON string to array for quizzes
+    const parsedCourse = {
+      ...course,
+      quizzes: course.quizzes.map((quiz: any) => ({
+        ...quiz,
+        questions: quiz.questions ? JSON.parse(quiz.questions) : [],
+      })),
+    }
+
+    return NextResponse.json({ success: true, data: parsedCourse })
   } catch (error) {
     console.error('Error fetching course:', error)
     return NextResponse.json(

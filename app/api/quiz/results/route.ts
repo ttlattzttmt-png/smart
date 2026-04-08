@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
         quizId,
         studentId,
         score,
-        answers: answers || [],
+        answers: JSON.stringify(answers || []),
       },
     })
 
@@ -59,7 +59,13 @@ export async function GET(request: NextRequest) {
       include: { quiz: true },
     })
 
-    return NextResponse.json({ success: true, data: results })
+    // Parse answers from JSON string to array
+    const parsedResults = results.map((result: any) => ({
+      ...result,
+      answers: result.answers ? JSON.parse(result.answers) : [],
+    }))
+
+    return NextResponse.json({ success: true, data: parsedResults })
   } catch (error) {
     console.error('Error fetching quiz results:', error)
     return NextResponse.json(

@@ -24,7 +24,7 @@ export async function POST(
         videoId: videoId || null,
         title,
         type,
-        questions,
+        questions: JSON.stringify(questions),
         duration: duration || 30,
       },
     })
@@ -67,7 +67,7 @@ export async function PUT(
       data: {
         ...(title && { title }),
         ...(type && { type }),
-        ...(questions && { questions }),
+        ...(questions && { questions: JSON.stringify(questions) }),
         ...(duration && { duration }),
       },
     })
