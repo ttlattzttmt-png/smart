@@ -1,44 +1,72 @@
 'use client'
 
-import { useState, use } from 'react'
+import { useState, use, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { mockCourses, mockVideos, mockQuizzes, mockAccessCodes, mockStudentProgress } from '@/lib/mock-data'
-import { Play, CheckCircle, Circle, FileQuestion, Clock, ChevronRight, Lock } from 'lucide-react'
+import { Loader2, Play, CheckCircle, Circle, FileQuestion, Clock, ChevronRight, Lock } from 'lucide-react'
+import type { Course, Video, Quiz } from '@/lib/types'
 
 export default function CourseViewPage({ params }: { params: Promise<{ courseId: string }> }) {
   const resolvedParams = use(params)
   const { user } = useAuth()
+  const [course, setCourse] = useState<Course | null>(null)
+  const [videos, setVideos] = useState<Video[]>([])
+  const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [hasAccess, setHasAccess] = useState(false)
 
-  const course = mockCourses.find(c => c.id === resolvedParams.courseId)
-  const videos = mockVideos.filter(v => v.courseId === resolvedParams.courseId).sort((a, b) => a.order - b.order)
-  const quizzes = mockQuizzes.filter(q => q.courseId === resolvedParams.courseId)
+  useEffect(() => {
+    fetchCourseData()
+  }, [resolvedParams.courseId])
 
-  // Check access
-  const hasAccess = mockAccessCodes.some(
-    c => c.studentId === user?.id && c.courseId === resolvedParams.courseId && c.isUsed
-  )
+  const fetchCourseData = async () => {
+    try {
+      setIsLoading(true)
 
-  const progress = mockStudentProgress.find(p => p.studentId === user?.id && p.courseId === resolvedParams.courseId)
-  const completedVideos = progress?.completedVideos || []
+      // Fetch course details
+      const courseResponse = await fetch(`/api/courses/${resolvedParams.courseId}`)
+      if (!courseResponse.ok) throw new Error('فشل جلب بيانات الكورس')
+      const courseData = await courseResponse.json()
+      setCourse(courseData.data)
+      setVideos(courseData.data.videos || [])
+      setQuizzes(courseData.data.quizzes || [])
 
-  const currentVideo = selectedVideo 
+      // Check access - for now, allow all courses (in production, check access codes)
+      setHasAccess(true)
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const currentVideo = selectedVideo
     ? videos.find(v => v.id === selectedVideo)
-    : videos.find(v => !completedVideos.includes(v.id)) || videos[0]
+    : videos[0]
 
   const videoQuiz = quizzes.find(q => q.videoId === currentVideo?.id)
 
-  if (!course) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  if (error || !course) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center">
             <h2 className="text-xl font-bold mb-2">الكورس غير موجود</h2>
-            <p className="text-muted-foreground mb-4">لم يتم العثور على هذا الكورس</p>
+            <p className="text-muted-foreground mb-4">{error || 'لم يتم العثور على هذا الكورس'}</p>
             <Button asChild>
               <Link href="/student/courses">العودة للكورسات</Link>
             </Button>
@@ -131,13 +159,12 @@ export default function CourseViewPage({ params }: { params: Promise<{ courseId:
             <CardHeader>
               <CardTitle>محتوى الكورس</CardTitle>
               <CardDescription>
-                {completedVideos.length}/{videos.length} فيديو مكتمل
+                {videos.length} فيديو متاح
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y">
                 {videos.map((video, index) => {
-                  const isCompleted = completedVideos.includes(video.id)
                   const isCurrent = video.id === currentVideo?.id
 
                   return (
@@ -149,9 +176,7 @@ export default function CourseViewPage({ params }: { params: Promise<{ courseId:
                       }`}
                     >
                       <div className="flex-shrink-0">
-                        {isCompleted ? (
-                          <CheckCircle className="h-5 w-5 text-green-600" />
-                        ) : isCurrent ? (
+                        {isCurrent ? (
                           <Play className="h-5 w-5 text-primary" />
                         ) : (
                           <Circle className="h-5 w-5 text-muted-foreground" />

@@ -93,9 +93,9 @@ export default function StudentCoursesPage() {
                 </div>
 
                 <Button className="w-full" asChild>
-                  <Link href={`/student/courses/${course.id}`}>
+                  <Link href={`/checkout?courseId=${course.id}`}>
                     <Play className="ml-2 h-4 w-4" />
-                    ابدأ الآن
+                    اشترِ الآن
                   </Link>
                 </Button>
               </CardContent>
