@@ -122,17 +122,25 @@ async function main() {
   console.log('✅ Created sample quiz')
 
   // Create access code
-  await prisma.accessCode.create({
-    data: {
-      code: 'COURSE-001',
-      courseId: course1.id,
-      studentId: student1.id,
-      isUsed: true,
-      usedAt: new Date(),
-    },
-  })
+  try {
+    await prisma.accessCode.create({
+      data: {
+        code: 'COURSE-001',
+        courseId: course1.id,
+        studentId: student1.id,
+        isUsed: true,
+        usedAt: new Date(),
+      },
+    })
 
-  console.log('✅ Created sample access code')
+    console.log('✅ Created sample access code')
+  } catch (e: any) {
+    if (e.code === 'P2002') {
+      console.log('✅ Access code already exists')
+    } else {
+      throw e
+    }
+  }
 
   console.log('🎉 Database seeded successfully!')
 }
