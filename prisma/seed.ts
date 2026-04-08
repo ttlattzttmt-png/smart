@@ -93,6 +93,21 @@ async function main() {
   console.log('✅ Created sample videos')
 
   // Create sample quiz
+  const questions = [
+    {
+      id: 'q1',
+      text: 'ما هو حل المعادلة: 2x + 3 = 7',
+      options: ['x = 1', 'x = 2', 'x = 3', 'x = 4'],
+      correctAnswer: 1,
+    },
+    {
+      id: 'q2',
+      text: 'إذا كان 3x - 5 = 10، فما قيمة x؟',
+      options: ['x = 3', 'x = 5', 'x = 7', 'x = 9'],
+      correctAnswer: 2,
+    },
+  ]
+
   await prisma.quiz.create({
     data: {
       courseId: course1.id,
@@ -100,20 +115,7 @@ async function main() {
       title: 'اختبار الجبر الأساسي',
       type: 'video',
       duration: 15,
-      questions: [
-        {
-          id: 'q1',
-          text: 'ما هو حل المعادلة: 2x + 3 = 7',
-          options: ['x = 1', 'x = 2', 'x = 3', 'x = 4'],
-          correctAnswer: 1,
-        },
-        {
-          id: 'q2',
-          text: 'إذا كان 3x - 5 = 10، فما قيمة x؟',
-          options: ['x = 3', 'x = 5', 'x = 7', 'x = 9'],
-          correctAnswer: 2,
-        },
-      ],
+      questions: JSON.stringify(questions),
     },
   })
 
