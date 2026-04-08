@@ -4,10 +4,10 @@ import { NextRequest, NextResponse } from 'next/server'
 // POST add video to course
 export async function POST(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
-    const courseId = params.courseId
+    const { courseId } = await params
     const { title, description, url, duration, order } = await request.json()
 
     if (!title || !url) {
@@ -54,11 +54,11 @@ export async function POST(
 // PUT update video
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { courseId: string; videoId: string } }
+  { params }: { params: Promise<{ courseId: string; videoId: string }> }
 ) {
   try {
     const { title, description, url, duration, order } = await request.json()
-    const videoId = params.videoId
+    const { videoId } = await params
 
     const video = await prisma.video.update({
       where: { id: videoId },
@@ -84,11 +84,10 @@ export async function PUT(
 // DELETE video
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { courseId: string; videoId: string } }
+  { params }: { params: Promise<{ courseId: string; videoId: string }> }
 ) {
   try {
-    const videoId = params.videoId
-    const courseId = params.courseId
+    const { videoId, courseId } = await params
 
     await prisma.video.delete({
       where: { id: videoId },

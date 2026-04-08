@@ -4,10 +4,10 @@ import { NextRequest, NextResponse } from 'next/server'
 // POST add quiz to course
 export async function POST(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
-    const courseId = params.courseId
+    const { courseId } = await params
     const { title, description, type, questions, duration, videoId } =
       await request.json()
 
@@ -55,12 +55,12 @@ export async function POST(
 // PUT update quiz
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { courseId: string; quizId: string } }
+  { params }: { params: Promise<{ courseId: string; quizId: string }> }
 ) {
   try {
     const { title, description, type, questions, duration } =
       await request.json()
-    const quizId = params.quizId
+    const { quizId } = await params
 
     const quiz = await prisma.quiz.update({
       where: { id: quizId },
@@ -85,11 +85,10 @@ export async function PUT(
 // DELETE quiz
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { courseId: string; quizId: string } }
+  { params }: { params: Promise<{ courseId: string; quizId: string }> }
 ) {
   try {
-    const quizId = params.quizId
-    const courseId = params.courseId
+    const { quizId, courseId } = await params
 
     await prisma.quiz.delete({
       where: { id: quizId },

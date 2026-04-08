@@ -5,10 +5,10 @@ import crypto from 'crypto'
 // POST create access code
 export async function POST(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
-    const courseId = params.courseId
+    const { courseId } = await params
 
     // Generate random access code
     const code = `COURSE-${crypto.randomBytes(4).toString('hex').toUpperCase()}`
@@ -37,10 +37,10 @@ export async function POST(
 // GET access codes for course
 export async function GET(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
-    const courseId = params.courseId
+    const { courseId } = await params
 
     const accessCodes = await prisma.accessCode.findMany({
       where: { courseId },

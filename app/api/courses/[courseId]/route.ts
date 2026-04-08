@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
-    const courseId = params.courseId
+    const { courseId } = await params
 
     const course = await prisma.course.findUnique({
       where: { id: courseId },
@@ -46,10 +46,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
-    const courseId = params.courseId
+    const { courseId } = await params
     const { title, description, grade, thumbnail, price } =
       await request.json()
 
@@ -76,10 +76,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
-    const courseId = params.courseId
+    const { courseId } = await params
 
     await prisma.course.delete({
       where: { id: courseId },

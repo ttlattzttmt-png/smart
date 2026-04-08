@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -8,12 +8,15 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { mockCourses, mockVideos, mockQuizzes, grades } from '@/lib/mock-data'
+import { grades } from '@/lib/mock-data'
 import type { Course } from '@/lib/types'
-import { Plus, Pencil, Trash2, Video, FileQuestion } from 'lucide-react'
+import { Plus, Pencil, Trash2, Video, FileQuestion, Loader2 } from 'lucide-react'
 
 export default function CoursesPage() {
-  const [courses, setCourses] = useState<Course[]>(mockCourses)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
   const [formData, setFormData] = useState({
@@ -22,6 +25,26 @@ export default function CoursesPage() {
     grade: '',
     price: ''
   })
+
+  useEffect(() => {
+    fetchCourses()
+  }, [])
+
+  const fetchCourses = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/courses')
+      if (!response.ok) throw new Error('فشل جلب الكورسات')
+      const data = await response.json()
+      setCourses(data.data || [])
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ')
+      setCourses([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleOpen = (course?: Course) => {
     if (course) {
@@ -39,36 +62,49 @@ export default function CoursesPage() {
     setIsOpen(true)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSubmitting(true)
     
-    if (editingCourse) {
-      setCourses(courses.map(c => 
-        c.id === editingCourse.id 
-          ? { ...c, ...formData, price: Number(formData.price) }
-          : c
-      ))
-    } else {
-      const newCourse: Course = {
-        id: `course-${Date.now()}`,
+    try {
+      const payload = {
         title: formData.title,
         description: formData.description,
         grade: formData.grade,
-        thumbnail: '/placeholder.svg?height=200&width=300',
-        price: Number(formData.price),
-        videosCount: 0,
-        quizzesCount: 0,
-        createdAt: new Date().toISOString()
+        price: Number(formData.price)
       }
-      setCourses([...courses, newCourse])
+
+      const response = await fetch('/api/courses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'فشل إضافة الكورس')
+      }
+
+      await fetchCourses()
+      setIsOpen(false)
+      setFormData({ title: '', description: '', grade: '', price: '' })
+      setEditingCourse(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ')
+    } finally {
+      setIsSubmitting(false)
     }
-    
-    setIsOpen(false)
   }
 
-  const handleDelete = (courseId: string) => {
-    if (confirm('هل أنت متأكد من حذف هذا الكورس؟')) {
-      setCourses(courses.filter(c => c.id !== courseId))
+  const handleDelete = async (courseId: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا الكورس؟')) return
+
+    try {
+      const response = await fetch(`/api/courses/${courseId}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('فشل حذف الكورس')
+      await fetchCourses()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ')
     }
   }
 
@@ -81,7 +117,7 @@ export default function CoursesPage() {
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => handleOpen()}>
+            <Button onClick={() => handleOpen()} disabled={isLoading}>
               <Plus className="ml-2 h-4 w-4" />
               إضافة كورس
             </Button>
@@ -103,6 +139,7 @@ export default function CoursesPage() {
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="مثال: الرياضيات - الصف الأول الثانوي"
                     required
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div className="space-y-2">
@@ -113,13 +150,14 @@ export default function CoursesPage() {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="وصف مختصر للكورس"
                     required
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="grade">الصف الدراسي</Label>
                     <Select value={formData.grade} onValueChange={(v) => setFormData({ ...formData, grade: v })}>
-                      <SelectTrigger>
+                      <SelectTrigger disabled={isSubmitting}>
                         <SelectValue placeholder="اختر الصف" />
                       </SelectTrigger>
                       <SelectContent>
@@ -141,15 +179,17 @@ export default function CoursesPage() {
                       placeholder="500"
                       required
                       dir="ltr"
+                      disabled={isSubmitting}
                     />
                   </div>
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>
                   إلغاء
                 </Button>
-                <Button type="submit">
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                   {editingCourse ? 'حفظ التغييرات' : 'إضافة الكورس'}
                 </Button>
               </DialogFooter>
@@ -158,59 +198,69 @@ export default function CoursesPage() {
         </Dialog>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {courses.map((course) => {
-          const videosCount = mockVideos.filter(v => v.courseId === course.id).length
-          const quizzesCount = mockQuizzes.filter(q => q.courseId === course.id).length
-          const gradeLabel = grades.find(g => g.value === course.grade)?.label || course.grade
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="py-3">
+            <p className="text-destructive text-sm">{error}</p>
+          </CardContent>
+        </Card>
+      )}
 
-          return (
-            <Card key={course.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{course.title}</CardTitle>
-                    <CardDescription className="mt-1">{gradeLabel}</CardDescription>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => handleOpen(course)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(course.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                  {course.description}
-                </p>
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1 text-muted-foreground">
-                      <Video className="h-4 w-4" />
-                      {videosCount}
-                    </span>
-                    <span className="flex items-center gap-1 text-muted-foreground">
-                      <FileQuestion className="h-4 w-4" />
-                      {quizzesCount}
-                    </span>
-                  </div>
-                  <span className="font-bold text-primary">{course.price} ج.م</span>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
-
-      {courses.length === 0 && (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : courses.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">لا توجد كورسات. أضف كورس جديد للبدء.</p>
           </CardContent>
         </Card>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {courses.map((course) => {
+            const gradeLabel = grades.find(g => g.value === course.grade)?.label || course.grade
+
+            return (
+              <Card key={course.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{course.title}</CardTitle>
+                      <CardDescription className="mt-1">{gradeLabel}</CardDescription>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleOpen(course)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(course.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                    {course.description}
+                  </p>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-4">
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <Video className="h-4 w-4" />
+                        {course.videosCount || 0}
+                      </span>
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <FileQuestion className="h-4 w-4" />
+                        {course.quizzesCount || 0}
+                      </span>
+                    </div>
+                    <span className="font-bold text-primary">{course.price} ج.م</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
       )}
     </div>
   )
